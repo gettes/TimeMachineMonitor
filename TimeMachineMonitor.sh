@@ -44,8 +44,7 @@ forceUnmount() {
 	if [ $DO_FORCE_UNMOUNT -eq 1 ]; then
                 TMvols=( $TMvol.* )
 		for vol in "${TMvols[@]}"; do
-			if [ "$vol" != "$TMvol.$SNAP" ]; then
-				#echo "$(DATE) $APP: Force ($vol)"
+			if [ "$vol" != "$TMvol.$SNAP" -a "$vol" != "$TMvol.*" ]; then
 				echo "$(DATE) $APP: Force `/usr/sbin/diskutil unmountDisk force \"$vol\"`"
 			fi
 		done
