@@ -58,9 +58,9 @@ while (true) do
 	do
 		case $line in
 		*'Checking size of '*)	Force 0
-					echo "$(DATE) $APP: Time Machine Starting..." ;;
+					echo "$(DATE) $APP: Preparing backup..." ;;
 		*'Backing up to '*)	Force 0
-					echo "$(DATE) $APP: Backup Started" ;;
+					echo "$(DATE) $APP: Backup Starting..." ;;
 		*'Cancellation timed out'*)	Force 1
 						echo "$(DATE) $APP: Timeout: Cancellation" ;;
 		*'Verifying backup disk image'*) Force 0
