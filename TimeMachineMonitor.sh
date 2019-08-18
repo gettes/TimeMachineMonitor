@@ -10,7 +10,7 @@
 # No privs needed.  Execcute as login item using TimeMachineMonitor.app
 #
 # to see TimeMachine and this monitor logging
-# log stream --style syslog  --info --predicate '(senderImagePath contains[cd] "TimeMachine") || (eventMessage contains "TimeMachineMonitor")'
+# log stream --style syslog  --info --predicate '(processImagePath contains "backupd" and subsystem beginswith "com.apple.TimeMachine") || (eventMessage contains "TimeMachineMonitor:")'
 
 INTERVAL=10
 READTIMEOUT=9
