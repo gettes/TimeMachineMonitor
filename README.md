@@ -15,6 +15,8 @@ The app was created using Platypus (https://github.com/sveinbjornt/Platypus) a w
 You will need to give permission for this unsigned app to run on your Mac.
 While I do nothing malicious - you accept all responsibilties for running this application.
 
+The Status app adds a status menu to the menu bar - click on it - it's obvious.  You should add this to login items.
+
 The logviewer app simply displays the output using the log command below.
 
 to see TimeMachine and this monitor logging
