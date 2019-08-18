@@ -16,7 +16,6 @@ volumes.  Until then, these apps should assist with proper management of TimeMac
 Before reading any further proper credit needs to be given.
 These apps were created using Platypus (https://github.com/sveinbjornt/Platypus), it allows one to
 build wrapper applications to run shell scripts for Mac OS X.
-The apps do not require any privileges nor do they do anything nefarious.  The code is included.
 
 # To use
 The easiest thing to do is to download the zip files, doubleclick/open them and move them where
@@ -54,4 +53,6 @@ has fully finished doing what it needs to do.
 -------
 
 No warranties are implied with using this software.  Use at your own risk.
-You accept all responsibilities for running the software.
+You accept all responsibilities for running the software.  
+
+The apps do not require any privileges nor do they do anything nefarious.  The shell code is included.
