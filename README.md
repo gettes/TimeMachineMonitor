@@ -1,4 +1,4 @@
-# TimeMachineMonitor / TimeMachineLog / TimeMachineStatus
+## TimeMachineMonitor / TimeMachineLog / TimeMachineStatus
 Monitor Apple TimeMachine Backups
 for Sierra (MacOS 12) and later systems since Sept 2016
 
@@ -12,7 +12,7 @@ are properly dismounted has eliminated all these strange behaviors.  Ultimately,
 fix TimeMachine so no volumes are mounted when TimeMachine isn't running - especially for Network
 volumes.  Until then, these apps should assist with proper management of TimeMachine volumes.
 
-# Thank you Platypus
+## Thank you Platypus
 Before reading any further proper credit needs to be given.
 These apps were created using Platypus (https://github.com/sveinbjornt/Platypus), it allows one to
 build wrapper applications to run shell scripts for Mac OS X.
@@ -22,16 +22,16 @@ The apps do not require any privileges nor do they do anything nefarious.  The c
 The easiest thing to do is to download the zip files, doubleclick/open them and move them where
 you like to have your apps.
 
-# TimeMachineLog
+## TimeMachineLog
 
 A simple app to display the logs related to TimeMachine and the TimeMachineMonitor.  As time goes
 on you will probably never use this app.  In the beginning, especially for the curious, the app
 helps you see why these apps were created.  The app runs the command:
-/usr/bin/log stream --style syslog  --info --predicate '(processImagePath contains "backupd" and subsystem
-beginswith "com.apple.TimeMachine") || (eventMessage contains "TimeMachineMonitor:")'
+```console
+/usr/bin/log stream --style syslog  --info --predicate '(processImagePath contains "backupd" and subsystem beginswith "com.apple.TimeMachine") || (eventMessage contains "TimeMachineMonitor:")'
+```
 
-
-# TimeMachineMonitor
+## TimeMachineMonitor
 
 You will want to make this a Login Item in System Preferences > Users & Groups.
 It essentially runs as a background process watching the TimeMachine logs for events
@@ -44,7 +44,7 @@ unfortunately doesn't mean it has actually completed.  TimeMachineMonitor will u
 only when it is safe and requires no privileges to do what it does.  It watches the logs
 and it uses Disk Utility to unmount volumes.
 
-# TimeMachineStatus
+## TimeMachineStatus
 
 You will also want to make this a Login Item in System Preferences > Users & Groups.
 It provides a menu bar item you click on and it tells you if TimeMachine is active.
