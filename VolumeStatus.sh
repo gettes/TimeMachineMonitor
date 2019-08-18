@@ -21,7 +21,15 @@ done
 
 if [ $TMmounted -eq 1 ]; then
 	echo " "
-	echo "Time Machine volumes still mounted"
-	echo "     DO NOT close laptop or disconnect Time Machine volumes"
+	echo "**** Time Machine volumes still mounted"
+	echo "     DO NOT close laptop or disconnect Time Machine devices"
+	echo " "
+	echo "     Wait for Time Machine to finish"
+	echo " "
+else
+	echo " "
+	echo "  Time Machine doesn't appear to be running now"
+	echo "     It appears to be safe to close your laptop"
+	echo "     and/or disconnect Time Machine devices"
 	echo " "
 fi
