@@ -24,18 +24,18 @@ for vol in "${TMvols[@]}"; do
 	if [ ${#mntvols[@]} -gt 0 ]; then
 		for cnt in $(seq 0 $((${#mntvols[@]} - 1))); do
 			mntvol="${mntvols[$cnt]}"
-			[[ $mntvol = "/" ]] && $mntvol = "/Volumes/Macintosh HD"
+			[[ $mntvol == "/" ]] && mntvol = "/Volumes/Macintosh HD"
 			if [[ $mntvol =~ $NETRE ]]; then
 				mntvol=${BASH_REMATCH[2]}
 			fi
-			[[ $vol = $mntvol ]] && ismntvol=1
+			[[ $mntvol != "/" && $mntvol =~ ^$vol ]] && ismntvol=1 && break
 		done
 	fi
-	TM="    "
-	[[ $vol =~ ^$TMvol.$SNAP ]] && TM="" # $SNAP vols are on local disk
-	[[ $vol =~ "Time Machine Backups" ]] && TM="TM> " && TMmounted=1
-	[[ $vol =~ ^$TMvol ]] && TM="TM> " && TMmounted=1
-	[[ $vol = "/Volumes/Recovery" ]] && TM="TM> " && TMmounted=1
+	TM="    "; TMmark=" -> "
+	[[ $vol =~ "Time Machine Backups" ]] && TM=$TMmark && TMmounted=1
+	[[ $vol =~ ^$TMvol && $ismntvol -eq 1 ]] && TM=$TMmark && TMmounted=1
+	[[ $vol = "/Volumes/Recovery" ]] && TM=$TMmark && TMmounted=1
+	[[ $vol =~ ^$TMvol && $ismntvol -eq 0 ]] && continue
 	echo "DISABLED|$TM$vol"
 done
 
