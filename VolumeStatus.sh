@@ -6,32 +6,55 @@ APP="VolumeStatus"
 SNAP="localsnapshots"
 TMvol="/Volumes/com.apple.TimeMachine"
 Vols="/Volumes/"
+NETRE='^(.+) on (.+) \((.+),.*'
 DATE() { /bin/date "+%Y-%m-%d %H:%M:%S" ; }
 
-echo "DISABLED|Volumes mounted @ $(DATE)"
-echo "----"
 TMvols=( $Vols* )
 TMmounted=0
+IFSBAK=$IFS; IFS=$'\n' # change IFS so the following will work
+mntvols=( $(/sbin/mount -vt afpfs,smbfs,hfs,apfs,exfat) )
+#mntvols=( $(/bin/cat ./mount.out) ) # for debugging
+#TMvols=( $(/bin/cat ./vol.out) ) # for debugging
+IFS=$IFSBAK
+
+echo "DISABLED|TimeMachineStatus: Volumes mounted" # @ $(DATE)"
+echo "----"
 for vol in "${TMvols[@]}"; do
+	ismntvol=0
+	if [ ${#mntvols[@]} -gt 0 ]; then
+		for cnt in $(seq 0 $((${#mntvols[@]} - 1))); do
+			mntvol="${mntvols[$cnt]}"
+			[[ $mntvol = "/" ]] && $mntvol = "/Volumes/Macintosh HD"
+			if [[ $mntvol =~ $NETRE ]]; then
+				mntvol=${BASH_REMATCH[2]}
+			fi
+			[[ $vol = $mntvol ]] && ismntvol=1
+		done
+	fi
 	TM="    "
-	[[ $vol =~ "Time Machine Backups" ]] && TM="TM: " && TMmounted=1
-	[[ $vol =~ ^$TMvol ]] && TM="TM: " && TMmounted=1
+	[[ $vol =~ ^$TMvol.$SNAP ]] && TM="" # $SNAP vols are on local disk
+	[[ $vol =~ "Time Machine Backups" ]] && TM="TM> " && TMmounted=1
+	[[ $vol =~ ^$TMvol ]] && TM="TM> " && TMmounted=1
+	[[ $vol = "/Volumes/Recovery" ]] && TM="TM> " && TMmounted=1
 	echo "DISABLED|$TM$vol"
 done
 
 echo "----"
 if [ $TMmounted -eq 1 ]; then
 cat <<HERE
-DISABLED|**** Time Machine volumes still mounted
-DISABLED|     DO NOT close laptop or disconnect Time Machine devices
+DISABLED|
+DISABLED|**** Time Machine appears to be active
+DISABLED|
+DISABLED|     DO NOT close your laptop or eject Time Machine devices
 DISABLED|
 DISABLED|     Wait for Time Machine to finish!
+DISABLED|
 HERE
 else
 cat <<HERE
-DISABLED|  Time Machine doesn't appear to be running now
-DISABLED|     It should be safe to close your laptop
-DISABLED|     and/or disconnect Time Machine devices
+DISABLED|  Time Machine doesn't appear to be running
+DISABLED|  Should now be safe to eject Time Machine devices
+DISABLED|    and/or close your laptop
 HERE
 fi
 

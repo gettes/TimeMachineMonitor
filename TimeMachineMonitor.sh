@@ -21,11 +21,11 @@ LOGFILTER='processImagePath contains "backupd" and subsystem beginswith "com.app
 DO_FORCE_UNMOUNT=0
 PIPE="/tmp/TMpipe.$$"
 LOGGER() { /usr/bin/logger -s -p local0.info $APP: $1; }
+NETRE='^(.+) on (.+) \((afpfs|smbfs),.*'
 if [ "$1" != "" ]; then DO_FORCE_UNMOUNT=1; fi
 self=$$
 running=`: ; pid=$(bash -c 'echo $PPID'); /bin/ps ax | /usr/bin/grep "bash $0" | /usr/bin/egrep -v "grep|^$self|^$pid" | /usr/bin/awk '{print $1}'`
 for pid in "$running"; do kill $pid 2>/dev/null; done
-
 
 trap 'forceUnmount' SIGUSR1
 trap 'LOGGER "End"; kill $LOGPID $SIGPID; /bin/rm -f $PIPE; exit 0' SIGQUIT SIGTERM SIGINT SIGHUP
@@ -35,19 +35,31 @@ trap 'LOGGER "Status FORCE=$DO_FORCE_UNMOUNT"' SIGINFO
 
 Force() { DO_FORCE_UNMOUNT=$1; }
 forceUnmount() {
+	IFSBAK=$IFS; IFS=$'\n' # change IFS so the following will work
+	netvols=($(/sbin/mount -vt smbfs,afpfs))  # TM vols are only on afp/smb network volumes
+	IFS=$IFSBAK
 	if [ $DO_FORCE_UNMOUNT -ge 2 ]; then LOGGER "forceUnmount: FORCE=$DO_FORCE_UNMOUNT" ; fi
 	if [ $DO_FORCE_UNMOUNT -ge 1 ]; then
                 TMvols=( $TMvol.* )
 		for vol in "${TMvols[@]}"; do
 			if [ $DO_FORCE_UNMOUNT -ge 2 ]; then LOGGER "forceUnmount: Vol=$vol" ; fi
 			if [ "$vol" != "$TMvol.$SNAP" -a "$vol" != "$TMvol.*" ]; then
-				trytype=""
+				isnetvol=0
+				for cnt in $(seq 0 $((${#netvols[@]} - 1))); do
+					netvol="${netvols[$cnt]}"
+					if [[ $netvol =~ $NETRE ]]; then
+						mntvol=${BASH_REMATCH[2]}
+					fi
+					[[ $vol = $mntvol ]] && isnetvol=1
+				done
+				[[ $isnetvol -eq 0 ]] && continue # only try unmount on netvols
+				trytype="netvol=$isnetvol "
 				try=$(/usr/sbin/diskutil unmountDisk "$vol")
 				if [ $? -ne 0 ]; then
-					trytype="force "
+					trytype="${trytype}force "
 					try=$(/usr/sbin/diskutil unmountDisk force "$vol")
 				fi
-				LOGGER "$trytype$try"
+				LOGGER "${trytype}${try}"
 			fi
 		done
 		if [ $DO_FORCE_UNMOUNT -le 2 ]; then Force 0; fi
@@ -69,7 +81,7 @@ while (true) do
 		case $logmsg in
 		*'Attempting to mount '*)Force 0
 					LOGGER "Looking for backup disk..." ;;
-		*'Checking size of '*)	Force 0
+		*'Checking for runtime '*)Force 0
 					LOGGER "Preparing backup..." ;;
 		*'Will copy ('*)	Force 0
 					LOGGER "Backup starting..." ;;
@@ -87,7 +99,8 @@ while (true) do
 					LOGGER "Stopping..." ;;
 		*'Cancellation timed out'*)	Force 1 ;;
 		*"Failed to unmount '$TMvol."*) Force 1 ;;
-		*"Unmounted '$TMvol."*)		Force 1 ;; # Force 1 to catch other vols still mounted
+		*"Unmounted '$TMvol."*)		Force 1 ;; # MacOS 10.14
+		*"Ejected Time Machine network volume"*)Force 1 ;; # MacOS 10.13
 		esac
 	done 
 done
