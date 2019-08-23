@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Michael R Gettes, gettes@gmail.com, August, 2019
+# Michael R Gettes, August, 2019
 
 APP="VolumeStatus"
 SNAP="localsnapshots"

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Michael R Gettes, gettes@gmail.com, August, 2019
+# Michael R Gettes, August, 2019
 
 # Watch Apple Time Machine backups (especially for network volumes)
 # should the volumes get stuck as Network volumes tend to do - force unmount when safe
@@ -13,7 +13,7 @@
 # log stream --style syslog  --info --predicate '(processImagePath contains "backupd" and subsystem beginswith "com.apple.TimeMachine") || (eventMessage contains "TimeMachineMonitor:")'
 
 INTERVAL=10
-READTIMEOUT=9
+READTIMEOUT=30
 APP="TimeMachineMonitor"
 SNAP="localsnapshots"
 TMvol="/Volumes/com.apple.TimeMachine"
@@ -28,7 +28,7 @@ running=`: ; pid=$(bash -c 'echo $PPID'); /bin/ps ax | /usr/bin/grep "bash $0" |
 for pid in "$running"; do kill $pid 2>/dev/null; done
 
 trap 'forceUnmount' SIGUSR1
-trap 'LOGGER "End"; kill $LOGPID $SIGPID; /bin/rm -f $PIPE; exit 0' SIGQUIT SIGTERM SIGINT SIGHUP
+trap 'trap - SIGCHLD; set +m; LOGGER "End"; kill $LOGPID $SIGPID; wait; /bin/rm -f $PIPE; exit 0' SIGQUIT SIGTERM SIGINT SIGHUP
 trap 'Force $(( $DO_FORCE_UNMOUNT + 1 )) ; LOGGER "+1 FORCE=$DO_FORCE_UNMOUNT"' SIGUSR2
 trap 'Force $(( $DO_FORCE_UNMOUNT - 1 )) ; LOGGER "-1 FORCE=$DO_FORCE_UNMOUNT"' SIGBUS
 trap 'LOGGER "Status FORCE=$DO_FORCE_UNMOUNT"' SIGINFO
@@ -65,14 +65,32 @@ forceUnmount() {
 		if [ $DO_FORCE_UNMOUNT -le 2 ]; then Force 0; fi
 	fi
 }
+childSignalHandler() {
+	kill -0 $SIGPID 2>/dev/null
+	#if [ $? -eq 0 ]; then echo "sig ($SIGPID) is alive!"; else echo "sig ($SIGPID) dead!"; startSignaler; fi
+	if [ $? -ne 0 ]; then echo "sig ($SIGPID) dead!"; startSignaler; fi
+	kill -0 $LOGPID 2>/dev/null
+	#if [ $? -eq 0 ]; then echo "log ($LOGPID) is alive!"; else echo "log ($LOGPID) dead!"; startLogstream; fi
+	if [ $? -ne 0 ]; then echo "log ($LOGPID) dead!"; startLogstream; fi
+}
+startSignaler() {
+	# subshell signals parent to spark forceUnmount handling
+	{ set -e ; sleep $INTERVAL ; while (true) do sleep $INTERVAL ; kill -USR1 $$ 2>/dev/null ; done } &
+	SIGPID=$!	# save for later killing on exit
+}
+startLogstream() {
+	/bin/rm -f $PIPE
+	/usr/bin/mkfifo $PIPE # named pipe for asynch handling
+	/usr/bin/log stream --style syslog --info --predicate "$LOGFILTER" > $PIPE &
+	LOGPID=$!	# keep track for later killing on term
+	exec < $PIPE	# push named pipe to stdin here for while read loop below
+}
 
-# subshell signals parent to spark forceUnmount handling
-{ set -e ; sleep $INTERVAL ; while (true) do sleep $INTERVAL ; kill -USR1 $$ 2>/dev/null ; done } &
-SIGPID=$!	# save for later killing on exit
-/usr/bin/mkfifo $PIPE # named pipe for asynch handling
-/usr/bin/log stream --style syslog --info --predicate "$LOGFILTER" > $PIPE &
-LOGPID=$!	# keep track for later killing on term
-exec < $PIPE	# push named pipe to stdin here for while read loop below
+startSignaler
+startLogstream
+
+set -m
+trap 'childSignalHandler' SIGCHLD
 
 LOGGER "Start"
 while (true) do
