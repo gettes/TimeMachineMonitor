@@ -29,7 +29,7 @@ on you will probably never use this app.  In the beginning, especially for the c
 helps you see why these apps were created.  You can open TimeMachineLog in TimeMachineStatus > Monitor Actions.
 The app runs the command:
 ```console
-/usr/bin/log stream --style syslog  --info --predicate '(processImagePath contains "backupd" and subsystem beginswith "com.apple.TimeMachine") || (eventMessage contains "TimeMachineMonitor:")'
+/usr/bin/log stream --style syslog  --info --predicate '(processImagePath contains "backupd" and subsystem beginswith "com.apple.TimeMachine") || (processImagePath contains "logger" and eventMessage contains "TimeMachineMonitor:")'
 ```
 
 ## TimeMachineMonitor
