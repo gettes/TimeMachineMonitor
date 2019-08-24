@@ -49,11 +49,11 @@ and it uses Disk Utility to unmount volumes.
 
 ## TimeMachineStatus
 
-You will also want to make this a Login Item in System Preferences > Users & Groups.
-Open TimeMachineStatus and then choose Monitor Actions > Install LoginItems
 It provides a menu bar item you click on and it tells you if TimeMachine is active.
 Checking the status before you close your laptop will help you safely close after TimeMachine
 has fully finished doing what it needs to do.
+You will also want to make this a Login Item in System Preferences > Users & Groups.
+Open TimeMachineStatus and then choose Monitor Actions > Install LoginItems.
 
 -------
 
