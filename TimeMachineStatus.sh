@@ -20,13 +20,17 @@ tell application "Finder"
 	try
 		tell application "System Events" to delete login item "TimeMachineStatus"
 	end try
+	tell application "System Preferences"
+		activate
+		set the current pane to pane "com.apple.preferences.users"
+		reveal anchor "startupItemsPref" of current pane
+	end tell
 end tell
 HERE
 )
 echo "$script" > $scriptFile
 /usr/bin/osascript $scriptFile
 /bin/rm -f $scriptFile
-open -b com.apple.systempreferences /System/Library/PreferencePanes/Accounts.prefPane
 }
 
 InstallLoginItems() {
@@ -44,13 +48,17 @@ tell application "Finder"
 	end try
 	set p to POSIX path of ((application file id "org.gettes.TimeMachineStatus") as alias)
 	tell application "System Events" to make login item at end with properties {name:"TimeMachineStatus", path:p, hidden:true}
+	tell application "System Preferences"
+		activate
+		set the current pane to pane "com.apple.preferences.users"
+		reveal anchor "startupItemsPref" of current pane
+	end tell
 end tell
 HERE
 )
 echo "$script" > $scriptFile
 /usr/bin/osascript $scriptFile
 /bin/rm -f $scriptFile
-open -b com.apple.systempreferences /System/Library/PreferencePanes/Accounts.prefPane
 }
 
 [[ $* =~ "Open TimeMachineLog" ]] && /usr/bin/open -b org.gettes.TimeMachineLog
