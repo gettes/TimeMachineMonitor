@@ -10,11 +10,56 @@ NETRE='^(.+) on (.+) \((.+),.*'
 DATE() { /bin/date "+%Y-%m-%d %H:%M:%S" ; }
 MonPIDS=$(/bin/ps axw | /usr/bin/egrep 'TimeMachineMonitor.app/Contents/Resources/script|TimeMachineMonitor.app/Contents/MacOS/TimeMachineMonitor' | /usr/bin/grep -v /usr/bin/egrep | /usr/bin/awk '{print $1}')
 
+RemoveLoginItems() {
+scriptFile=/tmp/ascript.$$.scpt
+script=$(/bin/cat <<'HERE'
+tell application "Finder"
+	try
+		tell application "System Events" to delete login item "TimeMachineMonitor"
+	end try
+	try
+		tell application "System Events" to delete login item "TimeMachineStatus"
+	end try
+end tell
+HERE
+)
+echo "$script" > $scriptFile
+/usr/bin/osascript $scriptFile
+/bin/rm -f $scriptFile
+open -b com.apple.systempreferences /System/Library/PreferencePanes/Accounts.prefPane
+}
+
+InstallLoginItems() {
+scriptFile=/tmp/ascript.$$.scpt
+script=$(/bin/cat <<'HERE'
+tell application "Finder"
+	try
+		tell application "System Events" to delete login item "TimeMachineMonitor"
+	end try
+	set p to POSIX path of ((application file id "org.gettes.TimeMachineMonitor") as alias)
+	tell application "System Events" to make login item at end with properties {name:"TimeMachineMonitor", path:p, hidden:true}
+
+	try
+		tell application "System Events" to delete login item "TimeMachineStatus"
+	end try
+	set p to POSIX path of ((application file id "org.gettes.TimeMachineStatus") as alias)
+	tell application "System Events" to make login item at end with properties {name:"TimeMachineStatus", path:p, hidden:true}
+end tell
+HERE
+)
+echo "$script" > $scriptFile
+/usr/bin/osascript $scriptFile
+/bin/rm -f $scriptFile
+open -b com.apple.systempreferences /System/Library/PreferencePanes/Accounts.prefPane
+}
+
 [[ $* =~ "Open TimeMachineLog" ]] && /usr/bin/open -b org.gettes.TimeMachineLog
 [[ $* =~ "Start Monitor" && -n "$MonPIDS" ]] && kill $MonPIDS
 [[ $* =~ "Start Monitor" ]] && /usr/bin/open -b org.gettes.TimeMachineMonitor
 [[ $* =~ "End Monitor" ]] && kill $MonPIDS
 [[ $* =~ "TimeMachineMonitor on GitHub" ]] && /usr/bin/open "http://github.com/gettes/TimeMachineMonitor"
+[[ $* =~ "Install LoginItems" ]] && InstallLoginItems
+[[ $* =~ "Remove LoginItems" ]] && RemoveLoginItems
 
 TMvols=( $Vols* )
 TMmounted=0
@@ -30,7 +75,7 @@ MonStatus="******   Monitor is NOT Running   ******" ; MonActive="DISABLED|" ; M
 
 /bin/cat <<HERE
 ${MonActive}MENUITEMICON|AppIcon.icns|  $MonStatus
-SUBMENU|     Monitor Actions|Open TimeMachineLog|$MonSUB
+SUBMENU|     Monitor Actions|Open TimeMachineLog|$MonSUB|Install LoginItems|Remove LoginItems
 ----
 HERE
 for vol in "${TMvols[@]}"; do

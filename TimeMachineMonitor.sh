@@ -19,7 +19,7 @@ SNAP="localsnapshots"
 TMvol="/Volumes/com.apple.TimeMachine"
 LOGFILTER='processImagePath contains "backupd" and subsystem beginswith "com.apple.TimeMachine"'
 DO_FORCE_UNMOUNT=0
-PIPE="/tmp/TMpipe.$$"
+PIPE=/tmp/TMpipe.$$
 LOGGER() { /usr/bin/logger -s -p local0.info $APP: $1; }
 NETRE='^(.+) on (.+) \((afpfs|smbfs),.*'
 if [ "$1" != "" ]; then DO_FORCE_UNMOUNT=1; fi
@@ -28,7 +28,7 @@ running=`: ; pid=$(bash -c 'echo $PPID'); /bin/ps ax | /usr/bin/grep "bash $0" |
 for pid in "$running"; do kill $pid 2>/dev/null; done
 
 trap 'forceUnmount' SIGUSR1
-trap 'trap - SIGCHLD; set +m; LOGGER "End"; kill $LOGPID $SIGPID; wait; /bin/rm -f $PIPE; exit 0' SIGQUIT SIGTERM SIGINT SIGHUP
+trap 'trap - SIGCHLD; set +m; LOGGER "End `/bin/rm $PIPE 2>&1`"; kill $LOGPID $SIGPID; wait; exit 0' SIGQUIT SIGTERM SIGINT SIGHUP
 trap 'Force $(( $DO_FORCE_UNMOUNT + 1 )) ; LOGGER "+1 FORCE=$DO_FORCE_UNMOUNT"' SIGUSR2
 trap 'Force $(( $DO_FORCE_UNMOUNT - 1 )) ; LOGGER "-1 FORCE=$DO_FORCE_UNMOUNT"' SIGBUS
 trap 'LOGGER "Status FORCE=$DO_FORCE_UNMOUNT"' SIGINFO
