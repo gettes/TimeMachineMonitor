@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Michael R Gettes, August, 2019
+# Michael R Gettes, gettes@gmail.com, August, 2019
 
 APP="VolumeStatus"
 SNAP="localsnapshots"
@@ -8,9 +8,12 @@ TMvol="/Volumes/com.apple.TimeMachine"
 Vols="/Volumes/"
 NETRE='^(.+) on (.+) \((.+),.*'
 DATE() { /bin/date "+%Y-%m-%d %H:%M:%S" ; }
+MonPIDS=$(/bin/ps axw | /usr/bin/egrep 'TimeMachineMonitor.app/Contents/Resources/script|TimeMachineMonitor.app/Contents/MacOS/TimeMachineMonitor' | /usr/bin/grep -v /usr/bin/egrep | /usr/bin/awk '{print $1}')
 
 [[ $* =~ "Open TimeMachineLog" ]] && /usr/bin/open -b org.gettes.TimeMachineLog
-[[ $* =~ "Status: TimeMachineMonitor" ]] && /usr/bin/open -b org.gettes.TimeMachineMonitor
+[[ $* =~ "Start Monitor" && -n "$MonPIDS" ]] && kill $MonPIDS
+[[ $* =~ "Start Monitor" ]] && /usr/bin/open -b org.gettes.TimeMachineMonitor
+[[ $* =~ "End Monitor" ]] && kill $MonPIDS
 [[ $* =~ "TimeMachineMonitor on GitHub" ]] && /usr/bin/open "http://github.com/gettes/TimeMachineMonitor"
 
 TMvols=( $Vols* )
@@ -22,11 +25,12 @@ mntvols=( $(/sbin/mount -vt afpfs,smbfs,hfs,apfs,exfat) )
 IFS=$IFSBAK
 
 MonCount=$(/bin/ps axw | /usr/bin/grep TimeMachineMonitor.app/Contents/Resources/script | /usr/bin/grep -v /usr/bin/grep | /usr/bin/wc -l | /usr/bin/awk '{print $1}')
-MonStatus="NOT Running" ; MonActive=""
-[[ $MonCount -eq 2 ]] && MonStatus="Running" && MonActive="DISABLED|"
+MonStatus="******   Monitor is NOT Running   ******" ; MonActive="DISABLED|" ; MonSUB="Start Monitor"
+[[ $MonCount -eq 2 ]] && MonStatus="Monitor Running" && MonActive="DISABLED|" && MonSUB="End Monitor"
+
 /bin/cat <<HERE
-${MonActive}MENUITEMICON|AppIcon.icns|Status: TimeMachineMonitor is $MonStatus
-MENUITEMICON|AppIcon.icns|Open TimeMachineLog
+${MonActive}MENUITEMICON|AppIcon.icns|  $MonStatus
+SUBMENU|     Monitor Actions|Open TimeMachineLog|$MonSUB
 ----
 HERE
 for vol in "${TMvols[@]}"; do
@@ -38,7 +42,6 @@ for vol in "${TMvols[@]}"; do
 			if [[ $mntvol =~ $NETRE ]]; then
 				mntvol=${BASH_REMATCH[2]}
 			fi
-			#[[ $mntvol != "/" && $mntvol =~ ^$vol ]] && ismntvol=1 && break
 			[[ $mntvol =~ ^$vol ]] && ismntvol=1 && break
 		done
 	fi
@@ -72,13 +75,7 @@ fi
 
 /bin/cat <<HERE
 ----
-MENUITEMICON|AppIcon.icns|TimeMachineMonitor on GitHub
+MENUITEMICON|AppIcon.icns|  TimeMachineMonitor on GitHub
 HERE
 
 exit
-
-cat <<HERE
-----
-SUBMENU|Title|Item1|Item2|Item3
-HERE
-
