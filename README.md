@@ -1,6 +1,7 @@
 ## TimeMachineMonitor / TimeMachineLog / TimeMachineStatus
 Monitor Apple TimeMachine Backups
 for Sierra (MacOS 12) and later systems since Sept 2016
+Heavily tested for Mojave.  Prior MacOS - please send logs if you have issues.
 
 Apple's TimeMachine really does make backups easy.
 There is a flaw for those with laptops.  The laptop is portable, connecting and disconnecting
@@ -25,7 +26,8 @@ you like to have your apps.
 
 A simple app to display the logs related to TimeMachine and the TimeMachineMonitor.  As time goes
 on you will probably never use this app.  In the beginning, especially for the curious, the app
-helps you see why these apps were created.  The app runs the command:
+helps you see why these apps were created.  You can open TimeMachineLog in TimeMachineStatus > Monitor Actions.
+The app runs the command:
 ```console
 /usr/bin/log stream --style syslog  --info --predicate '(processImagePath contains "backupd" and subsystem beginswith "com.apple.TimeMachine") || (eventMessage contains "TimeMachineMonitor:")'
 ```
@@ -33,6 +35,8 @@ helps you see why these apps were created.  The app runs the command:
 ## TimeMachineMonitor
 
 You will want to make this a Login Item in System Preferences > Users & Groups.
+Open TimeMachineStatus and then choose Monitor Actions > Install LoginItems.
+You can also manually start and end the Monitor in TimeMachineStatus > Monitor Actions.
 It essentially runs as a background process watching the TimeMachine logs for events
 requiring an unmount of the TimeMachine volumes when they aren't properly unmounted.
 
@@ -46,6 +50,7 @@ and it uses Disk Utility to unmount volumes.
 ## TimeMachineStatus
 
 You will also want to make this a Login Item in System Preferences > Users & Groups.
+Open TimeMachineStatus and then choose Monitor Actions > Install LoginItems
 It provides a menu bar item you click on and it tells you if TimeMachine is active.
 Checking the status before you close your laptop will help you safely close after TimeMachine
 has fully finished doing what it needs to do.
