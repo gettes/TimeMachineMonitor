@@ -19,7 +19,7 @@ These apps were created using Platypus (https://github.com/sveinbjornt/Platypus)
 build wrapper applications to run shell scripts for Mac OS X.
 
 # To use
-The easiest thing to do is to download the zip files, doubleclick/open them and move them where
+The easiest thing to do is to download the zip files, double-click/open them and move them where
 you like to have your apps.  To download each zip, select it in your web browser and choose "download".
 
 ## TimeMachineLog
