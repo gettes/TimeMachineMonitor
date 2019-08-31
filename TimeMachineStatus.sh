@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Michael R Gettes, gettes@gmail.com, August, 2019
+# Michael R Gettes, August, 2019
 
 APP="VolumeStatus"
 SNAP="localsnapshots"
@@ -40,14 +40,17 @@ tell application "Finder"
 	try
 		tell application "System Events" to delete login item "TimeMachineMonitor"
 	end try
-	set p to POSIX path of ((application file id "org.gettes.TimeMachineMonitor") as alias)
-	tell application "System Events" to make login item at end with properties {name:"TimeMachineMonitor", path:p, hidden:true}
-
+	try
+		set p to POSIX path of ((application file id "org.gettes.TimeMachineMonitor") as alias)
+		tell application "System Events" to make login item at end with properties {name:"TimeMachineMonitor", path:p, hidden:true}
+	end try
 	try
 		tell application "System Events" to delete login item "TimeMachineStatus"
 	end try
-	set p to POSIX path of ((application file id "org.gettes.TimeMachineStatus") as alias)
-	tell application "System Events" to make login item at end with properties {name:"TimeMachineStatus", path:p, hidden:true}
+	try
+		set p to POSIX path of ((application file id "org.gettes.TimeMachineStatus") as alias)
+		tell application "System Events" to make login item at end with properties {name:"TimeMachineStatus", path:p, hidden:true}
+	end try
 	tell application "System Preferences"
 		activate
 		set the current pane to pane "com.apple.preferences.users"
@@ -103,6 +106,7 @@ for vol in "${TMvols[@]}"; do
 	[[ $vol =~ ^$TMvol && $ismntvol -eq 1 ]] && TM=$TMmark && TMmounted=1
 	[[ $vol = "/Volumes/Recovery" ]] && TM=$TMmark && TMmounted=1
 	[[ $vol =~ ^$TMvol && $ismntvol -eq 0 ]] && continue
+	[[ $vol =~ ^$TMvol\.$SNAP && $ismntvol -eq 1 ]] && TM=$TMmark && TMmounted=0 && continue
 	echo "DISABLED|$TM$vol"
 done
 
