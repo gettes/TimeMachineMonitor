@@ -73,7 +73,7 @@ e2='^FORCE\: (.*)$'
 [[ $* =~ "TimeMachineMonitor on GitHub" ]] && /usr/bin/open "http://github.com/gettes/TimeMachineMonitor"
 [[ $* =~ "Install LoginItems" ]] && InstallLoginItems
 [[ $* =~ "Remove LoginItems" ]] && RemoveLoginItems
-[[ $* =~ $e1 ]] && /usr/sbin/diskutil unmount "${BASH_REMATCH[1]}"
+[[ $* =~ $e1 ]] && /usr/sbin/diskutil eject "${BASH_REMATCH[1]}"
 [[ $* =~ $e2 ]] && /usr/sbin/diskutil unmount force "${BASH_REMATCH[1]}"
 
 TMvols=( $Vols* )
