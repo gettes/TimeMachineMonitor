@@ -64,6 +64,8 @@ echo "$script" > $scriptFile
 /bin/rm -f $scriptFile
 }
 
+e1='^EJECT\: (.*)$'
+e2='^FORCE\: (.*)$'
 [[ $* =~ "Open TimeMachineLog" ]] && /usr/bin/open -b org.gettes.TimeMachineLog
 [[ $* =~ "Start Monitor" && -n "$MonPIDS" ]] && kill $MonPIDS
 [[ $* =~ "Start Monitor" ]] && /usr/bin/open -b org.gettes.TimeMachineMonitor
@@ -71,6 +73,8 @@ echo "$script" > $scriptFile
 [[ $* =~ "TimeMachineMonitor on GitHub" ]] && /usr/bin/open "http://github.com/gettes/TimeMachineMonitor"
 [[ $* =~ "Install LoginItems" ]] && InstallLoginItems
 [[ $* =~ "Remove LoginItems" ]] && RemoveLoginItems
+[[ $* =~ $e1 ]] && /usr/sbin/diskutil unmount "${BASH_REMATCH[1]}"
+[[ $* =~ $e2 ]] && /usr/sbin/diskutil unmount force "${BASH_REMATCH[1]}"
 
 TMvols=( $Vols* )
 TMmounted=0
@@ -102,11 +106,12 @@ for vol in "${TMvols[@]}"; do
 		done
 	fi
 	TM="    "; TMmark=" -> "
+	[[ $vol =~ ^$TMvol\.$SNAP && $ismntvol -eq 1 ]] && continue
 	[[ $vol =~ "Time Machine Backups" ]] && TM=$TMmark && TMmounted=1
 	[[ $vol =~ ^$TMvol && $ismntvol -eq 1 ]] && TM=$TMmark && TMmounted=1
 	[[ $vol = "/Volumes/Recovery" ]] && TM=$TMmark && TMmounted=1
-	[[ $vol =~ ^$TMvol && $ismntvol -eq 0 ]] && continue
-	[[ $vol =~ ^$TMvol\.$SNAP && $ismntvol -eq 1 ]] && TM=$TMmark && TMmounted=0 && continue
+	[[ $TMmounted -eq 1 ]] && echo "DISABLED|$TM$vol" && continue
+	[[ $TMmounted -eq 0 && $vol != "/Volumes/Macintosh HD" ]] && echo "SUBMENU|$TM$vol|EJECT: $vol|FORCE: $vol" && continue
 	echo "DISABLED|$TM$vol"
 done
 
