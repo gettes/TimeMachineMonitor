@@ -24,7 +24,7 @@ LOGGER() { /usr/bin/logger -s -p local0.info $APP: $1; }
 NETRE='^(.+) on (.+) \((afpfs|smbfs),.*'
 if [ "$1" != "" ]; then DO_FORCE_UNMOUNT=1; fi
 self=$$
-running=`: ; pid=$(bash -c 'echo $PPID'); /bin/ps ax | /usr/bin/grep "bash $0" | /usr/bin/egrep -v "grep|^$self|^$pid" | /usr/bin/awk '{print $1}'`
+running=`: ; pid=$(bash -c 'echo $PPID'); /bin/ps ax | /usr/bin/grep "bash $0" | /usr/bin/egrep -v "grep|$self|$pid" | /usr/bin/awk '{print $1}'`
 for pid in "$running"; do kill $pid 2>/dev/null; done
 
 trap 'forceUnmount' SIGUSR1
@@ -116,6 +116,7 @@ while (true) do
 		*'Backup canceled'*)	Force 0
 					LOGGER "Stopping..." ;;
 		*'Cancellation timed out'*)	Force 1 ;;
+		*'Failed to unmount snapshot:'*)Force 1 ;;
 		*"Failed to unmount '$TMvol."*) Force 1 ;;
 		*"Unmounted '$TMvol."*)		Force 1 ;; # MacOS 10.14
 		*"Ejected Time Machine network volume"*)Force 1 ;; # MacOS 10.13

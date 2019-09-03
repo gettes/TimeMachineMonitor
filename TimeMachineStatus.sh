@@ -106,7 +106,7 @@ for vol in "${TMvols[@]}"; do
 		done
 	fi
 	TM="    "; TMmark=" -> "
-	[[ $vol =~ ^$TMvol\.$SNAP && $ismntvol -eq 1 ]] && continue
+	[[ $vol =~ ^$TMvol\.$SNAP ]] && continue
 	[[ $vol =~ "Time Machine Backups" ]] && TM=$TMmark && TMmounted=1
 	[[ $vol =~ ^$TMvol && $ismntvol -eq 1 ]] && TM=$TMmark && TMmounted=1
 	[[ $vol = "/Volumes/Recovery" ]] && TM=$TMmark && TMmounted=1
