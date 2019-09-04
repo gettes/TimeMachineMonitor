@@ -84,9 +84,17 @@ mntvols=( $(/sbin/mount -vt afpfs,smbfs,hfs,apfs,exfat) )
 #TMvols=( $(/bin/cat ./vol.out) ) # for debugging
 IFS=$IFSBAK
 
+monTime="" ; monStatus=""
+if [ -f /tmp/.TimeMachineMonitor ]; then
+	read -r monTime monStatus < /tmp/.TimeMachineMonitor
+	now=$(/bin/date -j -f '%a %b %d %T %Z %Y' "$(/bin/date)" '+%s')
+	diff=$(( $now - $monTime ))
+	monHour=$(($diff / 3600)) ; monMin=$((($diff / 60) % 60)) ; monSec=$(($diff % 60))
+	monTime=": ${monHour}h ${monMin}m ago:"
+fi
 MonCount=$(/bin/ps axw | /usr/bin/grep TimeMachineMonitor.app/Contents/Resources/script | /usr/bin/grep -v /usr/bin/grep | /usr/bin/wc -l | /usr/bin/awk '{print $1}')
 MonStatus="******   Monitor is NOT Running   ******" ; MonActive="DISABLED|" ; MonSUB="Start Monitor"
-[[ $MonCount -eq 2 ]] && MonStatus="Monitor Running" && MonActive="DISABLED|" && MonSUB="End Monitor"
+[[ $MonCount -eq 2 ]] && MonStatus="Monitor Running${monTime} ${monStatus}" && MonActive="DISABLED|" && MonSUB="End Monitor"
 
 /bin/cat <<HERE
 ${MonActive}MENUITEMICON|AppIcon.icns|  $MonStatus
