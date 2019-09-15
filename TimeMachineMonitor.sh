@@ -9,8 +9,6 @@
 # This does handle multiple network volumes and odd timing conditions
 # No privs needed.  Execcute as login item using TimeMachineMonitor.app
 #
-# to see TimeMachine and this monitor logging
-# log stream --style syslog  --info --predicate '(processImagePath contains "backupd" and subsystem beginswith "com.apple.TimeMachine") || (eventMessage contains "TimeMachineMonitor:")'
 
 INTERVAL=10
 READTIMEOUT=30
@@ -21,7 +19,6 @@ LOGFILTER='processImagePath contains "backupd" and subsystem beginswith "com.app
 DO_FORCE_UNMOUNT=0
 PIPE=/tmp/TMpipe.$$
 DISKUTIL="/usr/sbin/diskutil"
-#EP='/bin/date -j -f "%a %b %d %T %Z %Y" $(/bin/date) "+%s"'
 STATUSFILE="/tmp/.$APP"
 LOGGER() { /usr/bin/logger -s -p local0.info $APP: $1; echo "$(/bin/date -j -f '%a %b %d %T %Z %Y' "$(/bin/date)" '+%s') $1" > $STATUSFILE ; }
 NETRE='^(.+) on (.+) \((afpfs|smbfs),.*'
@@ -32,11 +29,23 @@ running=`: ; pid=$(bash -c 'echo $PPID'); /bin/ps ax | /usr/bin/grep "bash $0" |
 for pid in "$running"; do kill $pid 2>/dev/null; done
 
 trap 'forceUnmount' SIGUSR1
-trap 'trap - SIGCHLD; set +m; LOGGER "End `/bin/rm $PIPE 2>&1`"; kill $LOGPID $SIGPID; wait; exit 0' SIGQUIT SIGTERM SIGINT SIGHUP
+trap 'LOGGER "Caught SIGILL - Restarting" ; Restart' SIGILL
+trap 'CleanUp ; exit 0' SIGQUIT SIGTERM SIGINT SIGHUP
 trap 'Force $(( $DO_FORCE_UNMOUNT + 1 )) ; LOGGER "+1 FORCE=$DO_FORCE_UNMOUNT"' SIGUSR2
 trap 'Force $(( $DO_FORCE_UNMOUNT - 1 )) ; LOGGER "-1 FORCE=$DO_FORCE_UNMOUNT"' SIGBUS
 trap 'LOGGER "Status FORCE=$DO_FORCE_UNMOUNT"' SIGINFO
 
+CleanUp() {
+	trap - SIGCHLD; set +m; LOGGER "End `/bin/rm $PIPE 2>&1`"; kill $LOGPID $SIGPID; wait;
+}
+Restart() {
+	CleanUp
+	MonPIDS=$(/bin/ps axw | /usr/bin/egrep 'TimeMachineMonitor.app/Contents/MacOS/TimeMachineMonitor' | /usr/bin/grep -v /usr/bin/egrep | /usr/bin/awk '{print $1}')
+	kill $MonPIDS
+	trap - SIGQUIT SIGTERM SIGINT SIGHUP
+	/usr/bin/open -b org.gettes.TimeMachineMonitor &
+	exit 0
+}
 Force() { DO_FORCE_UNMOUNT=$1; }
 forceUnmount() {
 	IFSBAK=$IFS; IFS=$'\n' # change IFS so the following will work
@@ -59,7 +68,8 @@ forceUnmount() {
 				done
 				[[ $isnetvol -eq 0 ]] && continue # only try unmount on netvols
 				trytype="netvol=$isnetvol "
-				$DISKUTIL unmountDisk force "/Volumes/Time Machine Backups"
+				try=$($DISKUTIL unmountDisk force "/Volumes/Time Machine Backups")
+				LOGGER "unmount /Volumes/Time Machine Backups: $try"
 				try=$($DISKUTIL unmountDisk "$vol")
 				if [ $? -ne 0 ]; then
 					trytype="${trytype}force "
@@ -90,10 +100,8 @@ forceUnmount() {
 }
 childSignalHandler() {
 	kill -0 $SIGPID 2>/dev/null
-	#if [ $? -eq 0 ]; then echo "sig ($SIGPID) is alive!"; else echo "sig ($SIGPID) dead!"; startSignaler; fi
 	if [ $? -ne 0 ]; then echo "sig ($SIGPID) dead!"; startSignaler; fi
 	kill -0 $LOGPID 2>/dev/null
-	#if [ $? -eq 0 ]; then echo "log ($LOGPID) is alive!"; else echo "log ($LOGPID) dead!"; startLogstream; fi
 	if [ $? -ne 0 ]; then echo "log ($LOGPID) dead!"; startLogstream; fi
 }
 startSignaler() {
@@ -115,7 +123,7 @@ startLogstream
 set -m
 trap 'childSignalHandler' SIGCHLD
 
-LOGGER "Start"
+LOGGER "Start ($self)"
 while (true) do
 	while read -t $READTIMEOUT -r logmsg 
 	do
