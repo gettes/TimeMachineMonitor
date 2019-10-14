@@ -40,29 +40,30 @@ if [ -n "$1" ]; then		# set up debugging
 	LOGFILTER="''"
 fi
 
-for pid in "$running"; do kill $pid 2>/dev/null; done
+for pid in "$running"; do kill -TERM $pid 2>/dev/null; done
 [[ $DEBUG -ne 0 ]] && echo "debugging DISKUTIL=$DISKUTIL"
 
 trap 'forceUnmount' SIGUSR1
 trap 'LOGGER "Caught SIGILL - Restarting" ; Restart' SIGILL
-trap 'CleanUp ; exit 0' SIGTERM SIGHUP SIGQUIT
+trap 'CleanUp ; exit 0' SIGTERM SIGHUP
 trap 'Force $(( $DO_FORCE_UNMOUNT + 1 )) ; LOGGER "+1 FORCE=$DO_FORCE_UNMOUNT"' SIGUSR2
 trap 'Force $(( $DO_FORCE_UNMOUNT - 1 )) ; LOGGER "-1 FORCE=$DO_FORCE_UNMOUNT"' SIGBUS
 trap 'LOGGER "Status FORCE=$DO_FORCE_UNMOUNT"' SIGINFO
 
 CleanUp() {
-	trap - SIGCHLD; set +m; LOGGER "End `/bin/rm $PIPE 2>&1`"; kill $LOGPID $SIGPID; wait;
+	trap - SIGCHLD; set +m; LOGGER "End `/bin/rm $PIPE 2>&1`"; kill $LOGPID 2>/dev/null; wait;
 }
 Restart() {
 	CleanUp
 	MonPIDS=$(/bin/ps axw | /usr/bin/egrep 'TimeMachineMonitor.app/Contents/MacOS/TimeMachineMonitor' | /usr/bin/grep -v /usr/bin/egrep | /usr/bin/awk '{print $1}')
-	kill $MonPIDS
-	trap - SIGQUIT SIGTERM SIGINT SIGHUP
+	kill -TERM $MonPIDS
+	trap - SIGTERM SIGHUP
 	/usr/bin/open -b org.gettes.TimeMachineMonitor &
 	exit 0
 }
 Force() { DO_FORCE_UNMOUNT=$1; [[ $DEBUG -ne 0 ]] && LOGGER "Force = $DO_FORCE_UNMOUNT" ; }
 forceUnmount() {
+	[[ $DO_FORCE_UNMOUNT -eq 0 ]] && return 0
 	IFSBAK=$IFS; IFS=$'\n' # change IFS so the following will work
 	netvols=($(/sbin/mount -vt smbfs,afpfs))  # TM vols are only on afp/smb network volumes
 	snapvols=($(/sbin/mount -v))  # grab all vols to look for snapshot vols to dismount later
@@ -121,13 +122,13 @@ forceUnmount() {
 	fi
 }
 SignalHandler() {
-	kill -0 $SIGPID 2>/dev/null
-	if [ $? -ne 0 ]; then echo "sig ($SIGPID) dead!"; startSignaler; fi
-	if [ $? -ne 0 ]; then 
-		LOGGER "sig ($SIGPID) dead! (DEBUG=$DEBUG)"
-		kill -0 $SIGPID 
-		wait $SIGPID
-	fi
+	#kill -0 $SIGPID 2>/dev/null
+	#if [ $? -ne 0 ]; then echo "sig ($SIGPID) dead!"; startSignaler; fi
+	#if [ $? -ne 0 ]; then 
+	#	LOGGER "sig ($SIGPID) dead! (DEBUG=$DEBUG)"
+	#	kill -0 $SIGPID 
+	#	wait $SIGPID
+	#fi
 	kill -0 $LOGPID 2>/dev/null
 	if [ $? -ne 0 ]; then 
 		LOGGER "log ($LOGPID) dead! (DEBUG=$DEBUG $LOGCOMMAND $LOGFILTER)"
@@ -150,7 +151,7 @@ startLogstream() {
 }
 
 startLogstream
-startSignaler
+#startSignaler
 
 #set -m
 #trap 'SignalHandler' SIGCHLD
@@ -209,7 +210,9 @@ while (true) do
 		*"Unmounted '$TMvol2."*)	Force 1 ;; # MacOS 10.15
 		*"Ejected Time Machine network volume"*)Force 1 ;; # MacOS 10.13
 		esac
+		#forceUnmount
 	done 
+	forceUnmount
 	SignalHandler
 
 	#echo "TIMEOUT: $?"

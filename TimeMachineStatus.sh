@@ -69,9 +69,9 @@ echo "$script" > $scriptFile
 e1='^EJECT\: (.*)$'
 e2='^FORCE\: (.*)$'
 [[ $* =~ "Open TimeMachineLog" ]] && /usr/bin/open -b org.gettes.TimeMachineLog
-[[ $* =~ "Start Monitor" && -n "$MonPIDS" ]] && kill $MonPIDS
+[[ $* =~ "Start Monitor" && -n "$MonPIDS" ]] && kill -TERM $MonPIDS
 [[ $* =~ "Start Monitor" ]] && /usr/bin/open -b org.gettes.TimeMachineMonitor
-[[ $* =~ "End Monitor" ]] && kill $MonPIDS
+[[ $* =~ "End Monitor" ]] && kill -TERM $MonPIDS
 [[ $* =~ "TimeMachineMonitor on GitHub" ]] && /usr/bin/open "http://github.com/gettes/TimeMachineMonitor"
 [[ $* =~ "Install LoginItems" ]] && InstallLoginItems
 [[ $* =~ "Remove LoginItems" ]] && RemoveLoginItems
@@ -97,7 +97,7 @@ IFS=$IFSBAK
 monTime="" ; monStatus=""; monTimeStart=""; monStatus2=""; st_items=""
 MonCount=$(/bin/ps axw | /usr/bin/grep TimeMachineMonitor.app/Contents/Resources/script | /usr/bin/grep -v /usr/bin/grep | /usr/bin/wc -l | /usr/bin/awk '{print $1}')
 MonStatus="******   Monitor is NOT Running   ******" ; MonActive="DISABLED|" ; MonSUB="Start Monitor"
-if [ $MonCount -eq 2 -a -f "$STATUSFILE" ]; then
+if [ $MonCount -eq 1 -a -f "$STATUSFILE" ]; then
 	st_RE='^([0-9]+) (.+)$'
 	now=$(/bin/date -j -f '%a %b %d %T %Z %Y' "$(/bin/date)" '+%s')
 	IFSBAK=$IFS; IFS=$'\n' # change IFS so the following will work
@@ -124,7 +124,7 @@ if [ $MonCount -eq 2 -a -f "$STATUSFILE" ]; then
 	st_items="    Age      Status|$st_items"
 fi
 
-if [ $MonCount -eq 2 ]; then
+if [ $MonCount -eq 1 ]; then
 /bin/cat <<HERE
 ${MonActive}MENUITEMICON|AppIcon.icns|  $MonStatus
 ${MonActive}$MonStatus2
