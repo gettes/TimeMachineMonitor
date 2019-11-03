@@ -12,6 +12,27 @@ DATE() { /bin/date "+%Y-%m-%d %H:%M:%S" ; }
 STATUSFILE=/tmp/.TimeMachineMonitor
 MonPIDS=$(/bin/ps axw | /usr/bin/egrep 'TimeMachineMonitor.app/Contents/Resources/script|TimeMachineMonitor.app/Contents/MacOS/TimeMachineMonitor' | /usr/bin/grep -v /usr/bin/egrep | /usr/bin/awk '{print $1}')
 
+forceCleanup () {
+	pids=$(/bin/ps axw | /usr/bin/grep TimeMachineMonitor.app/Contents/Resources/script | /usr/bin/grep -v /usr/bin/grep | /usr/bin/awk '{print $1}')
+	kill -USR2 $pids
+}
+
+OpenTMprefs() {
+scriptFile=/tmp/ascript.$$.scpt
+script=$(/bin/cat <<'HERE'
+tell application "Finder"
+	tell application "System Preferences"
+		activate
+		set the current pane to pane "com.apple.prefs.backup"
+	end tell
+end tell
+HERE
+)
+echo "$script" > $scriptFile
+/usr/bin/osascript $scriptFile
+/bin/rm -f $scriptFile
+}
+
 RemoveLoginItems() {
 scriptFile=/tmp/ascript.$$.scpt
 script=$(/bin/cat <<'HERE'
@@ -68,28 +89,57 @@ echo "$script" > $scriptFile
 
 e1='^EJECT\: (.*)$'
 e2='^FORCE\: (.*)$'
-[[ $* =~ "Open TimeMachineLog" ]] && /usr/bin/open -b org.gettes.TimeMachineLog
-[[ $* =~ "Start Monitor" && -n "$MonPIDS" ]] && kill -TERM $MonPIDS
-[[ $* =~ "Start Monitor" ]] && /usr/bin/open -b org.gettes.TimeMachineMonitor
-[[ $* =~ "End Monitor" ]] && kill -TERM $MonPIDS
-[[ $* =~ "TimeMachineMonitor on GitHub" ]] && /usr/bin/open "http://github.com/gettes/TimeMachineMonitor"
-[[ $* =~ "Install LoginItems" ]] && InstallLoginItems
-[[ $* =~ "Remove LoginItems" ]] && RemoveLoginItems
-[[ $* =~ $e1 ]] && /usr/sbin/diskutil eject "${BASH_REMATCH[1]}"
-[[ $* =~ $e2 ]] && /usr/sbin/diskutil unmount force "${BASH_REMATCH[1]}"
+[[ $* =~ "Open TimeMachineLog" ]] && /usr/bin/open -b org.gettes.TimeMachineLog && exit
+[[ $* =~ "Skip This Backup" ]] && /usr/bin/tmutil stopbackup && exit
+[[ $* =~ "Back Up Now" ]] && /usr/bin/tmutil startbackup --auto --rotation && exit
+[[ $* =~ "Open Time Machine Preferences..." ]] && OpenTMprefs && exit
+[[ $* =~ "Start Monitor" && -n "$MonPIDS" ]] && kill -TERM $MonPIDS && exit
+[[ $* =~ "Start Monitor" ]] && /usr/bin/open -b org.gettes.TimeMachineMonitor && exit
+[[ $* =~ "End Monitor" ]] && kill -TERM $MonPIDS && exit
+[[ $* =~ "TimeMachineMonitor on GitHub" ]] && /usr/bin/open "http://github.com/gettes/TimeMachineMonitor" && exit
+[[ $* =~ "Install LoginItems" ]] && InstallLoginItems && exit
+[[ $* =~ "Remove LoginItems" ]] && RemoveLoginItems && exit
+[[ $* =~ "Cleanup Time Machine" ]] && forceCleanup && exit
+[[ $* =~ $e1 ]] && /usr/sbin/diskutil eject "${BASH_REMATCH[1]}" && exit
+[[ $* =~ $e2 ]] && /usr/sbin/diskutil unmount force "${BASH_REMATCH[1]}" && exit
+[[ -n "$*" ]] && echo "nothing to see here... move along" && exit
 
-timeRemaining=$(/usr/bin/tmutil status | /usr/bin/grep TimeRemaining)
+tmutil=$(/usr/bin/tmutil status | /usr/bin/egrep '_raw_Percent|TimeRemaining|_raw_totalBytes')
 if [ $? -eq 0 ]; then
-	tRE='^.*= ([0-9]+);'
-	[[ "$timeRemaining" =~ $tRE ]] && timeRemaining=${BASH_REMATCH[1]}
-	printf -v timeRemaining '      about %dh %dm %ss to go;  ' $(($timeRemaining / 3600)) $((($timeRemaining / 60) % 60)) $(($timeRemaining % 60))
-else timeRemaining="                     "
+	pRE='.*"_raw_Percent" = "([0-9.]+)";'
+	bRE='"_raw_totalBytes" = ([0-9]+);'
+	if [[ "$tmutil" =~ $pRE ]]; then
+		percentage=${BASH_REMATCH[1]}
+		if [[ "$tmutil" =~ $bRE ]]; then rawBytes=${BASH_REMATCH[1]}; fi
+		percentage=$(/usr/bin/bc <<< "scale=2; $percentage*100")
+		bRaw=$(/usr/bin/bc <<< "scale=2; $rawBytes/1000000000")
+		if [ $(( $rawBytes / 1000000000 )) -lt 1 ]; then
+			if [ $(( $rawBytes / 1000000 )) -lt 1 ]; then
+				bScale="KB"; bRaw=$(( $rawBytes / 1000 )) ; bFmt="%d"
+			else
+				bScale="MB"; bRaw=$(( $rawBytes / 1000000 )) ; bFmt="%d"
+			fi
+		else
+			bScale="GB";  bFmt="%.2f"
+		fi
+		printf -v percentage "%.0f%% of $bFmt %s and" $percentage $bRaw $bScale
+	else percentage=""
+	fi
+	tRE='TimeRemaining = ([0-9]+);'
+	if [[ "$tmutil" =~ $tRE ]]; then
+		timeRemaining=${BASH_REMATCH[1]}
+		printf -v timeRemaining '     %s %dh %dm %ss to go' "$percentage" $(( $timeRemaining / 3600 )) $(( ($timeRemaining / 60) % 60 )) $(( $timeRemaining % 60 ))
+	else
+		timeRemaining=""
+		[[ -n "$percentage" ]] && timeRemaining="     $percentage Calculating time"
+	fi
+else timeRemaining=""
 fi
 
 TMvols=( $Vols )
 TMmounted=0
 IFSBAK=$IFS; IFS=$'\n' # change IFS so the following will work
-mntvols=( $(/sbin/mount -vt afpfs,smbfs,hfs,apfs,exfat) )
+Mmntvols=( $(/sbin/mount -vt afpfs,smbfs,hfs,apfs,exfat) )
 #mntvols=( $(/bin/cat ./mount.out) ) # for debugging
 #TMvols=( $(/bin/cat ./vol.out) ) # for debugging
 IFS=$IFSBAK
@@ -106,10 +156,10 @@ if [ $MonCount -eq 1 -a -f "$STATUSFILE" ]; then
 	[[ "${st_file[${#st_file[@]}-1]}" =~ $st_RE ]] && monTime=${BASH_REMATCH[1]} && monStatus=${BASH_REMATCH[2]}
 	[[ "${st_file[0]}" =~ $st_RE ]] && monTimeStart=${BASH_REMATCH[1]} && monStatusStart=${BASH_REMATCH[2]}
 	diff=$(( $now - $monTime ))
-	printf -v monTime ': %dh %dm ago: %s' $(($diff / 3600)) $((($diff / 60) % 60)) "$monStatus"
+	printf -v monTime '%dh %dm ago: %s' $(($diff / 3600)) $((($diff / 60) % 60)) "$monStatus"
 	diff=$(( $now - $monTimeStart ))
-	printf -v monTimeStart '%s %dh %dm ago: %s' "$timeRemaining" $(($diff / 3600)) $((($diff / 60) % 60)) "$monStatusStart"
-	MonStatus="Monitor Running${monTime}" ; MonActive="DISABLED|" ; MonSUB="End Monitor"; MonStatus2="${monTimeStart}"
+	printf -v monTimeStart '%dh %dm ago: %s' $(($diff / 3600)) $((($diff / 60) % 60)) "$monStatusStart"
+	MonStatus="${monTime}" ; MonActive="DISABLED|" ; MonSUB="End Monitor"; MonStatus2="${monTimeStart}"
 	for st_cnt in $(seq 0 ${#st_file[@]}) ; do
 		st_time=""
 		if [[ "${st_file[$st_cnt]}" =~ $st_RE ]]; then
@@ -125,20 +175,30 @@ if [ $MonCount -eq 1 -a -f "$STATUSFILE" ]; then
 fi
 
 if [ $MonCount -eq 1 ]; then
+echo "${MonActive}MENUITEMICON|AppIcon.icns|  $MonStatus"
+echo "${MonActive}     $monTimeStart"
+[[ -n "$timeRemaining" ]] && echo "$MonActive$timeRemaining"
 /bin/cat <<HERE
-${MonActive}MENUITEMICON|AppIcon.icns|  $MonStatus
-${MonActive}$MonStatus2
+----
 SUBMENU|     Status History for last Backup|$st_items
-SUBMENU|     Monitor Actions|Open TimeMachineLog|$MonSUB|Install LoginItems|Remove LoginItems
+SUBMENU|     Monitor Actions|Open TimeMachineLog|$MonSUB|Install LoginItems|Remove LoginItems|Cleanup Time Machine
 ----
 HERE
 else
 /bin/cat <<HERE
+----
 ${MonActive}MENUITEMICON|AppIcon.icns|  $MonStatus
-SUBMENU|     Monitor Actions|Open TimeMachineLog|$MonSUB|Install LoginItems|Remove LoginItems
+SUBMENU|     Monitor Actions|Open TimeMachineLog|$MonSUB|Install LoginItems|Remove LoginItems|Cleanup Time Machine
 ----
 HERE
 fi
+Running=$(/usr/bin/tmutil status | /usr/bin/grep "Running = 1")
+if [ $? -eq 0 ]; then
+	echo "     Skip This Backup"
+else	echo "     Back Up Now"
+fi
+echo "     Open Time Machine Preferences..."
+echo "----"
 
 for vol in "${TMvols[@]}"; do
 	ismntvol=0
